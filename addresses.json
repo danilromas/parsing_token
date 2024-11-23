@@ -1,7 +1,12 @@
 [
     {
+<<<<<<< HEAD
         "address": "8qgMmnDvKJTQVkQCmZPvpNS6aoh1urHMD2o8YPZEWR3M",
         "start_date": "Nov 17 20:00:00",
         "end_date": "Nov 17 20:10:00"
+=======
+        "address": "d2ycy5cvwjztun89ex2vxplzrsseaj9zg89fprnzypwu",
+        "date": "Nov 14 20:42:00"
+>>>>>>> 89a3ea4 (Initial commit)
     }
 ]
