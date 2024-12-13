@@ -1,41 +1,60 @@
 import os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from collections import defaultdict
 import json
 import time
 from datetime import datetime
-import cloudscraper
+
+print("Добро пожаловать! Этот код предназначен для сайта dextools.io.")
 
 
-print("Вас приветсвует Selenium парсинг! данный код расчитан на сайт dextools.io. Пожалуйста,перед тем как начать,убедитесь,что вы сделали все необходимое в файле addres.py")
-#duration = int(input("Введите количество секунд, в течение которых должен работать цикл поиска транзакций: "))
+if not os.path.exists("dextools"):os.mkdir("dextools")
 
+existing_json_files = [f for f in os.listdir("dextools") if f.endswith(".json")]
+if existing_json_files:
+    print(f"В папке dextools найдены JSON-файлы.Учтите,при новом запуске папка очищается для новых токенов")
+    proceed = input("Все равно начать работу? (да/нет): ").strip().lower()
+    if proceed != "да":
+        print("Работа приостоновленна. Сохраните необходимые транзакции токенов,если не хотите их ликвидации.")
+        exit()
+# Удаление старых файлов из папки
 for filename in os.listdir("dextools"):
     if filename.endswith(".json"):os.remove(os.path.join("dextools", filename))
+
+
 options = webdriver.ChromeOptions()
 options.add_argument("--disable-blink-features=AutomationControlled")
+
 # Получаем путь к директории, где находится main.py
 base_dir = os.path.dirname(os.path.abspath(__file__))
 # Инициализируем Service с относительным путем
 s = Service(executable_path=os.path.join(base_dir, 'chromedriver-win64', 'chromedriver.exe'))
 driver = webdriver.Chrome(service=s, options=options)
 
-with open('addresses.json', 'r', encoding='utf-8') as f: addresses = json.load(f)
+with open('addresses.json', 'r', encoding='utf-8') as f:
+    addresses = json.load(f)
+
 try:
     driver.maximize_window()
     driver.get("https://www.dextools.io/app/en/hot-pairs")
     wait = WebDriverWait(driver, 15)
 
     # Закрываем всплывающее окно, если оно появилось
-    if EC.element_to_be_clickable((By.CLASS_NAME, 'close')) == True:
+    try:
         close = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'close')))
         close.click()
+    except Exception:
+        pass  # Если окна нет, продолжаем
+    try:
+        close =driver.find_element(By.XPATH,"//button[@class = 'cky-btn cky-btn-accept'][@aria-label = 'Accept All']")
+        close.click()
+    except Exception:
+        pass
+
 
     time.sleep(2)
     for entry in addresses:
@@ -68,10 +87,10 @@ try:
 
             pause_button = wait.until(EC.element_to_be_clickable((By.XPATH,"//button[@type='button'][@class='btn btn-outline-secondary pair-explorer-actions__button pair-explorer-actions__button--pause']")))
             driver.execute_script("arguments[0].scrollIntoView();", pause_button)
-            time.sleep(2)
+            time.sleep(4)
             pause_button.click()
             name = (driver.find_element(By.XPATH, "//span[@class='token-left size-l ng-star-inserted']")).text
-
+            name = name.replace('\x00', '')
             stop_iteration = False
             while not stop_iteration:
                 wallet = driver.find_element(By.CLASS_NAME, 'datatable-body')
@@ -117,7 +136,8 @@ try:
         # Сохраняем ссылки даже в случае ошибки
         href_count = defaultdict(int)
         for href in links_list:
-            href_count[href] += 1
+            cleaned_href = href.replace('\x00', '')
+            href_count[cleaned_href] += 1
         sorted_links = sorted(href_count.items(), key=lambda item: item[1], reverse=True)
 
         existing_files = [f for f in os.listdir("dextools") if f.endswith(".json")]
@@ -128,4 +148,4 @@ try:
 
 finally:
     driver.quit()
-    print("Работа завершена. Все данные помещены в папку dextools. Нумерация JSON файлов начинается с 1. В первый файл помещаются данные первого вами указанного токена, во второй - второго токена и т.д.")
+    print("Работа завершена. Все данные помещены в папку 'dextools'.")
